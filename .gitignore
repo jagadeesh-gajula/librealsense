@@ -38,6 +38,7 @@ librealsense.xc/build
 *.class
 
 local_ignore/
+surface_captures/
 
 #Visual Studio Project
 .vs/*
