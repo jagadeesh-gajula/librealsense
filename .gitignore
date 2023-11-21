@@ -39,6 +39,7 @@ librealsense.xc/build
 
 local_ignore/
 surface_captures/
+filtered_rgb_captures/
 
 #Visual Studio Project
 .vs/*
