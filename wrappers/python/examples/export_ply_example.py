@@ -10,13 +10,15 @@ import pyrealsense2 as rs
 
 
 # Declare pointcloud object, for calculating pointclouds and texture mappings
-pc = rs.pointcloud()
+# pc = rs.pointcloud()
+
 # We want the points object to be persistent so we can display the last cloud when a frame drops
-points = rs.points()
+# points = rs.points()
 
 # Declare RealSense pipeline, encapsulating the actual device and sensors
 pipe = rs.pipeline()
 config = rs.config()
+
 # Enable depth stream
 config.enable_stream(rs.stream.depth)
 
@@ -27,29 +29,24 @@ pipe.start(config)
 # (alternatively, texture can be obtained from color or infrared stream)
 colorizer = rs.colorizer()
 
-from tqdm import tqdm 
 
-for i in tqdm(range(100)):
+try:
+    # Wait for the next set of frames from the camera
+    frames = pipe.wait_for_frames()
+    colorized = colorizer.process(frames)
 
-    try:
-        # Wait for the next set of frames from the camera
-        frames = pipe.wait_for_frames()
-        colorized = colorizer.process(frames)
+    # Create save_to_ply object
+    ply = rs.save_to_ply("test_one.ply")
 
-        # Create save_to_ply object
-        ply = rs.save_to_ply("2.ply")
+    # Set options to the desired values
+    # In this example we'll generate a textual PLY with normals (mesh is already created by default)
+    ply.set_option(rs.save_to_ply.option_ply_binary, False)
+    ply.set_option(rs.save_to_ply.option_ply_normals, True)
 
-        # Set options to the desired values
-        # In this example we'll generate a textual PLY with normals (mesh is already created by default)
-        ply.set_option(rs.save_to_ply.option_ply_binary, False)
-        ply.set_option(rs.save_to_ply.option_ply_normals, True)
-
-        # print("Saving to 2.ply...")
-        # Apply the processing block to the frameset which contains the depth frame and the texture
-        ply.process(colorized)
-        # print("Done")
-    finally:
-        pass
-        
-        
-pipe.stop()
+    print("Saving to 2.ply...")
+    # Apply the processing block to the frameset which contains the depth frame and the texture
+    ply.process(colorized)
+    print("Done")
+    
+finally:
+    pipe.stop()

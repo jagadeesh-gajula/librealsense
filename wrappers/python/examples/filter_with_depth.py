@@ -12,6 +12,8 @@ import numpy as np
 # Import OpenCV for easy image rendering
 import cv2
 import time
+
+import open3d as o3d
 # Create a pipeline
 pipeline = rs.pipeline()
 
@@ -83,18 +85,48 @@ try:
         color_image = np.asanyarray(color_frame.get_data())
 
         # Remove background - Set pixels further than clipping_distance to grey
-        grey_color = 153
-        depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
-        bg_removed = np.where((depth_image_3d > clipping_distance) | (depth_image_3d <= 0), grey_color, color_image)
+        grey_color = 0
+        background = clipping_distance
+        
+        # depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
+        # bg_removed = np.where((depth_image_3d > clipping_distance) | (depth_image_3d <= 0), grey_color, color_image)
+        
+        bg_depth = np.where((depth_image > clipping_distance) | (depth_image <= 0), background, depth_image)
 
         # Render images:
         #   depth align to color on left
         #   depth on right
-        depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-        images = np.hstack((bg_removed, depth_colormap))
+        #depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(bg_depth, alpha=0.03), cv2.COLORMAP_HOT)
+        # images = np.hstack((bg_removed, depth_colormap))
+        
+        # bg_flatten = list(bg_depth.flatten())
+        
+        # single_width = np.arange(0,1280,1)
+        # width = list( np.tile(single_width,720))
+        
+        # single_height = np.arange(0,720,1)
+        # height = list( np.tile(single_height,1280) )
+        
+        # xyz = [(bg_flatten[i],width[i],height[i]) for i in range(921500)]
+        # xyz = np.array(xyz)
+        
+        xyz =  [[(width, height , bg_depth[width,[height]][0] ) for width in range(bg_depth.shape[0])] for height in range(bg_depth.shape[1])] 
+        xyzs  = np.array( [item for sublist in xyz for item in sublist] )
+        
+        
+
+        # print(xyz.shape)
+        # print(len(width))
+        # print(len(height))
+        # print(len(bg_flatten))
+        
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(xyzs)
+        o3d.visualization.draw_geometries([pcd])
+        
 
         # cv2.namedWindow('Align Example', cv2.WINDOW_NORMAL)
-        # cv2.imshow('Align Example', depth_colormap)
+        # cv2.imshow('Align Example', bg_depth)
         
         # print(depth_colormap.shape)
         # print(depth_colormap.min())
@@ -104,9 +136,7 @@ try:
         break
         
         #cv2.imwrite(f"/home/tron/librealsense/filtered_rgb_captures/{np.random.random()}.jpg",bg_removed)
-        
-        
-        
+
         key = cv2.waitKey(1)
         # Press esc or 'q' to close the image window
         if key & 0xFF == ord('q') or key == 27:
