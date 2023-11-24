@@ -2,10 +2,6 @@ import numpy as np
 import open3d as o3d
 import time
 
-# Function to update point cloud data
-def update_point_cloud(pcd):
-    new_xyz = np.random.rand(100000, 3)
-    pcd.points = o3d.utility.Vector3dVector(new_xyz)
 
 # Create a random point cloud
 xyz = np.random.rand(100, 3)
@@ -25,7 +21,8 @@ render_option.point_size = 5.0  # Set the point size
 
 # Run the visualization loop
 while True:
-    update_point_cloud(pcd)  # Update point cloud data
+    new_xyz = np.random.rand(10000, 3)
+    pcd.points = o3d.utility.Vector3dVector(new_xyz) # Update point cloud data
     vis.update_geometry(pcd)  # Update geometry
     vis.poll_events()
     vis.update_renderer()
