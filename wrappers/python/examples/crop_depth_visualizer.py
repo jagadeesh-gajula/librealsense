@@ -1,10 +1,6 @@
 ## License: Apache 2.0. See LICENSE file in root directory.
 ## Copyright(c) 2017 Intel Corporation. All Rights Reserved.
 
-#####################################################
-##              Align Depth to Color               ##
-#####################################################
-
 # First import the library
 import pyrealsense2 as rs
 # Import Numpy for easy array manipulation
@@ -16,6 +12,7 @@ import time
 import open3d as o3d
 # Create a pipeline
 pipeline = rs.pipeline()
+import pickle
 
 # Create a config and configure the pipeline to stream
 #  different resolutions of color and depth streams
@@ -83,12 +80,13 @@ def get_depth():
     #color_image = np.asanyarray(color_frame.get_data())
 
     # Remove background - Set pixels further than clipping_distance to grey
-    grey_color = 0
     background = clipping_distance
 
     
     bg_depth = np.where((depth_image > clipping_distance) | (depth_image <= 0), background, depth_image)
-    bg_depth = bg_depth[250:580,700:780]
+    bg_depth = bg_depth[220:580,600:830] #[height,width]
+    
+    #bg_depth = bg_depth[230:550,650:750]
 
     
     xyz =  [[(width, height , bg_depth[width,[height]][0] ) for width in range(bg_depth.shape[0])] for height in range(bg_depth.shape[1])] 
@@ -96,17 +94,23 @@ def get_depth():
     
     
 
-    return xyzs
+    return [xyzs, bg_depth]
     
     
 
 # Create a random point cloud
-xyzs = get_depth()
+xyzs = get_depth()[0]
 pcd = o3d.geometry.PointCloud()
 pcd.points = o3d.utility.Vector3dVector(xyzs)
 
+def rotate_view(vis):
+        ctr = vis.get_view_control()
+        ctr.rotate(10.0, 0.0)
+        return False
+
 # Set up visualization window
 vis = o3d.visualization.Visualizer()
+#vis = o3d.visualization.draw_geometries_with_animation_callback([pcd],rotate_view)
 vis.create_window()
 
 # Add point cloud to the window
@@ -116,17 +120,30 @@ vis.add_geometry(pcd)
 render_option = vis.get_render_option()
 render_option.point_size = 5.0  # Set the point size
 
-prev = get_depth()
+prev = get_depth()[0]
 
+file_number = 1
 # Run the visualization loop
 while True:
-    new_xyz = get_depth() 
-    new_xyz = (new_xyz + prev) // 2
+    depth_1 = get_depth()
+    depth_2 = get_depth()
+    
+    depth_array = (depth_1[1] + depth_2[1]) / 2
+    
+    file = open(f"./depth_arrays/depth_array_{file_number}.bin","wb")   #binary file not pickle
+    pickle.dump(depth_array,file)
+    file.close()
+    
+    new_xyz = (depth_1[0] + depth_2[0]) / 2
+    
+    new_xyz = (new_xyz + prev) / 2
+    
     pcd.points = o3d.utility.Vector3dVector(new_xyz)
     prev = new_xyz
     vis.update_geometry(pcd)  # Update geometry
     vis.poll_events()
     vis.update_renderer()
+    file_number += 1
     #time.sleep(1)  # Wait for 1 secondl
 
 # Close the visualization window when the loop ends
